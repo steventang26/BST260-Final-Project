@@ -41,7 +41,11 @@ Averaged PM2.5 concentration across the period 2000-2018  was linked to each cou
 ## Design Overview
 We will modify the code from the research team github to extract the relevant data from JHU-CSSE through 10/31/2021. Data for the introduction of vaccines will be determined by a literature search. All data will be stored in a shared group Github. 
 
-For this project we will use machine learning techniques to predict the number of COVID-19 deaths in a county from 06/18/2020 to 10/31/21 based on the models from a previous study (Wu, X., Nethery, R. C., Sabath, M. B., Braun, D. and Dominici, F., 2020. Air pollution and COVID-19 mortality in the United States: Strengths and limitations of an ecological regression analysis. Science advances, 6(45), p.eabd4049.). 
+For this project we will use machine learning techniques to predict the number of COVID-19 deaths in a county from 06/18/2020 to 10/31/21.
 
 We will then compare these numbers to the actual reported number of cases. We will perform the statistical analysis for the full data (through 10/31/21) to see if these models still describe the data into the late phase of the pandemic. Secondary explorations will include comparing the time frame up to the introduction of the vaccine to the time after the vaccine to see if these models fit the data for a population with available vaccines. To aid in this process, we will create maps of the US depicting county-level COVID-19 deaths, SES, PM.25. Finally, we will incorporate these maps into a SHINY app that allows for users to toggle between maps and look at individual counties.
 
+## Reference
+1. Wu, X., Nethery, R. C., Sabath, M. B., Braun, D. and Dominici, F., 2020. Air pollution and COVID-19 mortality in the United States: Strengths and limitations of an ecological regression analysis. Science advances, 6(45), p.eabd4049.
+
+2. A pre-print version can be found at: Exposure to air pollution and COVID-19 mortality in the United States. Xiao Wu, Rachel C. Nethery, Benjamin M. Sabath, Danielle Braun, Francesca Dominici. medRxiv 2020.04.05.20054502; doi: https://doi.org/10.1101/2020.04.05.20054502
