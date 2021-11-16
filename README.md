@@ -2,9 +2,6 @@
 
 2021 Fall | BST260 Final Project (Group 12)
 
-# BST260-Final-Project
-
-## Final Project 
 This is the final project repository for the Fall 2021 section of BST 260 at Harvard's T.H. Chan School of Public Health. 
 
 ## Team Members 
