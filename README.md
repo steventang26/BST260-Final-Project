@@ -19,7 +19,7 @@ In 2020, coronavirus disease 2019 (COVID-19) is attacking human beings in the gl
 
 According to data from Johns Hopkins University, more than 353,000 coronavirus deaths have been reported this year. Many of the pre-existing conditions that increase the risk of COVID-19 mortality are the same diseases that are affected by long-term exposure to air pollution. Long-term exposure to PM2.5 has been connected to a number of comorbidities, including cardiovascular and lung disease, that have been linked to poor prognosis and death in COVID-19 patients. However, the majority of the studies focused on the association between PM2.5 and COVID-19 cases rather than COVID-19 mortality. Moreover, these studies only have data up to mid-June 2020, which was likely to be biased and of lower generalizability since they only included the first wave COVID-19 cases.
 
-In this study, we directly investigated the impact of air pollution on COVID-19 mortality risk by leveraging cumulative COVID-19 mortality data in 3,093 counties across the U.S. nationwide, updated to 2021. 
+In this study, we directly investigated the impact of air pollution on COVID-19 mortality risk by leveraging cumulative COVID-19 mortality data in 3,105 counties across the U.S. nationwide, updated to 2021. 
 
 ## Objectives
 1. To investigate the effect of long-term exposure to air pollution on COVID-19 outcomes
