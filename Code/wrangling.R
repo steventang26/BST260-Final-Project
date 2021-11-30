@@ -9,6 +9,10 @@ library(RCurl)
 library(httr)
 
 date_of_study <- "10-31-2021"
+
+#Use Apr 15 as the Vax cutoff point
+#date_of_study <- "04-15-2021"
+
 # Historical data
 covid_hist <- read.csv(text = getURL("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/03-30-2020.csv"))
 covid_us_hist <- subset(covid_hist, Country_Region == "US" & is.na(FIPS) == F)
@@ -148,3 +152,6 @@ aggregate_pm_census_cdc <- merge(aggregate_pm_census,
 
 aggregate_pm_census_cdc <- aggregate_pm_census_cdc[is.na(aggregate_pm_census_cdc$fips) == F, ]
 
+#Export Data
+#write.csv(aggregate_pm_census_cdc,"aggregate_pm_census_cdc_211031.csv", row.names = FALSE)
+#write.csv(aggregate_pm_census_cdc,"aggregate_pm_census_cdc_210415.csv", row.names = FALSE)
