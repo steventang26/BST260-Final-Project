@@ -15,7 +15,7 @@ date_of_study <- "10-31-2021"
 
 # Historical data
 covid_hist <- read.csv(text = getURL("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/03-30-2020.csv"))
-covid_us_hist <- subset(covid_hist, Country_Region == "US" & is.na(FIPS) == F)
+covid_us_hist <- subset(covid_hist, Country_Region == "US" & is.na(FIPS) == F) # 
 
 # Import outcome data from JHU CSSE
 covid <- read.csv(text = getURL(paste0("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/", date_of_study, ".csv")))
@@ -27,6 +27,7 @@ covid_us$FIPS <- str_pad(covid_us$FIPS, 5, pad = "0")
 county_pm <- read.csv(text = getURL("https://raw.githubusercontent.com/wxwx1993/PM_COVID/updated_data/Data/county_pm25.csv"))
 
 county_temp <- read.csv(text = getURL("https://raw.githubusercontent.com/wxwx1993/PM_COVID/updated_data/Data/temp_seasonal_county.csv"))
+
 # Import census, brfss, testing, mortality, hosptial beds data as potential confounders
 county_census <- read.csv(text = getURL("https://raw.githubusercontent.com/wxwx1993/PM_COVID/updated_data/Data/census_county_interpolated.csv"))
 #county_brfss <- read.csv(text = getURL("https://www.countyhealthrankings.org/sites/default/files/media/document/analytic_data2020.csv"), skip = 1)
@@ -153,5 +154,5 @@ aggregate_pm_census_cdc <- merge(aggregate_pm_census,
 aggregate_pm_census_cdc <- aggregate_pm_census_cdc[is.na(aggregate_pm_census_cdc$fips) == F, ]
 
 #Export Data
-#write.csv(aggregate_pm_census_cdc,"aggregate_pm_census_cdc_211031.csv", row.names = FALSE)
+write.csv(aggregate_pm_census_cdc,"aggregate_pm_census_cdc.csv", row.names = FALSE)
 #write.csv(aggregate_pm_census_cdc,"aggregate_pm_census_cdc_210415.csv", row.names = FALSE)
