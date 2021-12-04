@@ -1,0 +1,76 @@
+---
+title: "BST260Final_Project_XB_MLsection"
+author: "Xiang Bai"
+date: "12/3/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Load Libraries
+
+```{r}
+library("dplyr")
+library(stringr)
+library(RCurl)
+library(httr)
+```
+
+## Load Preprocess data
+
+You can also embed plots, for example:
+
+```{r}
+df = read.csv("aggregate_pm_census_cdc.csv")
+head(df)
+dim(df)
+```
+
+There are a total of 47 variables in this data that was combined from [multiple sources](https://github.com/steventang26/BST260-Final-Project/blob/master/README.md).
+
+### Exploratory Data Analysis
+
+
+```{r}
+
+```
+
+### Some interesting plots
+
+```{r eval = FALSE}
+
+```
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
