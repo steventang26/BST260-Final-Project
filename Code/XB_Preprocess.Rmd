@@ -1,0 +1,150 @@
+---
+title: "BST260Final_Project_XB_MLsection"
+author: "Xiang Bai"
+date: "12/3/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Load Libraries
+
+```{r echo = FALSE}
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(RCurl)
+library(httr)
+library(caret)
+library(ggplot2)
+library(mlbench)
+library(Boruta)
+library("DataExplorer")
+library(ggstatsplot)
+library(ggcorrplot)
+library(lares)
+set.seed(260)
+```
+
+## Load Preprocess data
+
+You can also embed plots, for example:
+
+```{r}
+df_complete = read.csv("../Data/aggregate_pm_census_cdc.csv")
+dim(df_complete) # shape of data
+head(df_complete) # brief look at data
+names(df_complete) # all included variables
+```
+
+There are a total of 47 variables in this data that was combined from [multiple sources](https://github.com/steventang26/BST260-Final-Project/blob/master/README.md).
+Of this data there are over 3000 counties and resulting dependent variables--which
+we are looking at either COVID cases or COVID deaths.
+
+```{r}
+
+```
+
+
+```{r}
+
+# drop all repeated variables and keep wanted 
+# keep Population as the correct variable
+todrop = c("fips","Admin2","Recovered","Active", "q_popdensity","Last_Update", "year", "median_household_income", "no_grad_mcare", "no_grad", "Country_Region", "NAME", "population")
+
+df <- df_complete %>% 
+  select(-todrop) %>% 
+  subset(Province_State != "Utah") %>% 
+  rename_all(recode, Combined_Key = "County") %>% 
+  remove_rownames %>% 
+  column_to_rownames(var = "County") %>% 
+  select(-Province_State)# Utah reported no cases or deaths info
+  
+names(df)
+glimpse(df)
+```
+
+
+### Exploratory Data Analysis
+
+```{r}
+# plot cases and deaths by County
+
+states = rownames(df[which(df["Deaths"] > 10000),]) #points to label
+rownames(df[states,])
+
+plot_intro(df) # shows data.nas
+plot_correlation(df)
+
+ggstatsplot::ggcorrmat(
+  data = df,
+  type = "parametric", 
+  colors = c("darkred", "white", "steelblue")) # change default colors
+
+## too many variables in ugly correlation plot
+
+ggplot(df, aes(x = Confirmed, y = Deaths)) +
+  geom_point(size = 1) +
+  scale_x_log10() +
+  scale_y_log10() ## kind of useless plot
+
+  #geom_text(label = rownames(df[states,]))
+
+corr_cross(df, 
+  max_pvalue = 0.05, # display only significant correlations (at 5% level)
+  top = 15) # display top 10 couples of variables (by correlation coefficient)
+
+
+```
+
+```{r}
+
+# dropping these variabls as redundant with age_pct variables avoid collinearity
+todropmore = c("mid_pecent", "prime_pecent", "older_pecent" ,"young_pecent") 
+
+df <- df %>% 
+  select(-todropmore)
+
+plot_correlation(df)
+
+ggstatsplot::ggcorrmat(
+  data = df,
+  type = "parametric", 
+  colors = c("darkred", "white", "steelblue")) # change default colors
+
+## too many variables in ugly correlation plot
+
+ggplot(df, aes(x = Confirmed, y = Deaths)) +
+  geom_point(size = 1) +
+  scale_x_log10() +
+  scale_y_log10() ## kind of useless plot
+
+  #geom_text(label = rownames(df[states,]))
+
+corr_cross(df, 
+  max_pvalue = 0.05, # display only significant correlations (at 5% level)
+  top = 15)
+```
+### Machine Learning Splitting
+
+```{r}
+index_train<- createDataPartition(y = df$Deaths, times =1, p=0.8, list = FALSE)
+train_set <- slice(df, index_train)
+test_set <- slice(df, -index_train)
+
+dim(train_set)
+dim(test_set)
+```
+
+
+```{r}
+# determine the variables to run on
+# next steps LASSO for feature selection
+# run maybe RFE
+# ml models considered
+
+```
+
+
