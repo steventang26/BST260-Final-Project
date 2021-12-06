@@ -1,0 +1,248 @@
+# Part 1: Regression models: predicting COVID mortality risk
+
+In Part I, we will firstly summarize the characteristics of the US county-level study cohort up to Nov. 1, 2021. Then we will be using linear regression models to predict mean COVID mortality rate (per 100,000), and logistic regression models to predict the probablity of mortality rate >= median value.
+
+## Step 0: read in the dataset
+
+```{r}
+# read in dataset
+library(dplyr)
+library(ggplot2)
+library(plotly)
+library(Matrix)
+library(MASS)
+library(lme4)
+
+df <- read.csv("/Users/jenniferdai/Desktop/BST260-Final-Project/Data/aggregate_pm_census_cdc_211031.csv")
+head(df)
+```
+
+
+## Step 1: Descriptive Analysis and Correlation Plot
+
+In step 1, we conduct a descriptive analysis of our key variables, COVID-19 mortality and PM2.5 exposure, and 17 potential confounders including population density, percent of population ≥ 65 years of age, percent of the population 45-64 years of age, percent of the population 15-44 years of age, percent of the population living in poverty, median household income, percent of Black residents, percent of Hispanic residents, percent of the adult population with less than high school education, median house value, percent of owner-occupied housing, percent of the population with obesity, percent of current smokers, and average daily temperature and relative humidity for summer (June to September) and winter (December to February) for each county. In addition, we conduct a correlation test and plot out the association between COVID-19 mortality and PM2.5 exposure.
+
+```{r}
+library(pastecs)
+
+# Calculate COVID-19 mortality rate and prepare sample dataset for analysis
+reg_data <- df %>% mutate(Mortality = Deaths/Population * 100000)
+
+
+# Descriptive Analysis
+desvars <- c("Mortality", "Deaths", "mean_pm25", "smoke", "obese", "poverty", "no_grad", "owner_occupied", "hispanic_pct", 
+             "blk_pct", "age_pct_65_plus", "age_pct_45_65", "age_pct_15_44", "population_density", "median_household_income", 
+             "median_house_value", "mean_summer_temp", "mean_winter_temp", "mean_summer_rm", "mean_winter_rm")
+stat.desc(reg_data[desvars], p = 0.95)
+
+```
+
+We summarized the descriptive analysis results into the table below.
+![Table 1](/Users/jenniferdai/Desktop/BST260-Final-Project/Code/descriptive_analysis.png)
+
+We included 3105 U.S counties which reported daily COVID-19 infected and death cases. County-level COVID-19 mortality rates were defined for our analyses as the ratio of COVID-19 deaths to county-level population size.
+
+On average, 17.6% of the US country-level population aged over 65 yrs; 16.4% of the population are living under the federal poverty standard; 71.3% of the household owned their house, and the percentage of people with less than high school education is 21.5%.
+
+
+
+```{r}
+library(ggplot2)
+library(ggpubr)
+
+# Correlation Plot
+ggscatter(
+   reg_data, 
+   x = "mean_pm25", 
+   y = "Mortality", 
+   add = "reg.line", 
+   conf.int = TRUE, 
+   cor.coef = TRUE, 
+   cor.method = "spearman", 
+   color = "gray", 
+   add.params = list(color = "black"),
+   sample = 18,
+   palette = "uchicago",
+   xlab = "PM2.5 (ug/m^3)", 
+   ylab = "COVID-19 Mortality Rate (per 100,000)",
+   title = "Correlation between COVID-19 Mortality and PM2.5") # R = 0.22
+
+ggsave("correlation_plot.tiff", units="in", width=6, height=6, dpi=200, compression = 'lzw') 
+
+```
+
+Our Figure 1 in Part I is shown above, based on Figure 1, we can see that the correlation coefficient is 0.22 with a p-value < 0.001.
+
+
+## Step 2: Linear Regression Model: predict the mean COVID mortality rate adjusted by demographics, socioeconomic status, behavior risk factors, and environmental conditions.
+
+In this part, we are using linear models to predict mean COVID mortality rate. Our predictor of interest is *PM2.5 exposure*, which is measured as the 17-year average concentration 2000-2016 by [van Donekelaar et al](https://pubs.acs.org/doi/10.1021/acs.est.8b06392). To adjust for confounding bias in the nationwide observational study, we use county-level variables from numerous public sources: (1) [US Census/American Community Survey](https://www.census.gov/programs-surveys/acs/data.html), (2) [Robert Wood Johnson Foundation County Health Rankings](https://www.countyhealthrankings.org/), (3) [Gridmet via Google Earth engine](http://www.climatologylab.org/gridmet.html). We will also consider the potential effect of nationwide vaccination campaigns since April 15, 2021.
+
+```{r}
+# read in COVID dataset before Vaccination become nationwide available (before April 15, 2021)
+# Calculate COVID-19 mortality rate and prepare sample dataset for analysis
+
+df_bfVax <- read.csv("/Users/jenniferdai/Desktop/BST260-Final-Project/Data/aggregate_pm_census_cdc_210415.csv")
+reg_data_bfVax <- df_bfVax %>% mutate(Mortality = Deaths/Population * 100000)
+
+```
+
+
+```{r}
+library(emmeans)
+
+# crude model, predictor: PM2.5 exposure
+lm_fit = lm(log(1 + Mortality) ~ mean_pm25, data = reg_data)
+summary(lm_fit)
+lsmeans(lm_fit,  ~ mean_pm25)
+
+```
+Based on the result of crude model, we observed a positive association between COVID-19 mortality rate and long-term PM2.5 exposure. 1 ug/m^3 increase of 17-years average PM2.5 exposure is associated with 7.6% increase of COVID-19 mortality rate on the county-level.
+
+
+### Full Data up until Nov. 1, 2021
+```{r}
+# Mortality Date up until Nov. 1, 2021
+# Adjusted by demographics, socioeconomic status, behavior risk factors, and environmental conditions
+# Scale covariates in order to make it easier to interpret regression coeffcients
+
+lm_fit_adjusted = lm(log(1 + Mortality) ~ mean_pm25 + 
+                        scale(smoke) + 
+                        scale(obese) + 
+                        scale(poverty) + 
+                        scale(no_grad) + 
+                        scale(owner_occupied) + 
+                        scale(blk_pct) + 
+                        scale(hispanic_pct) +
+                        scale(age_pct_65_plus) +
+                        scale(age_pct_45_65) +
+                        scale(age_pct_15_44) +
+                        scale(log(population_density)) +
+                        scale(log(median_household_income)) +
+                        scale(log(median_house_value)) +
+                        scale(mean_summer_temp) + scale(mean_winter_temp) + scale(mean_summer_rm) + scale(mean_winter_rm) +
+                        offset(log(Population)), data = reg_data)
+
+summary(lm_fit_adjusted)
+lsmeans(lm_fit_adjusted, ~ mean_pm25)
+          
+```
+
+**Full Data up until Nov. 1, 2021**: Overall, the F-statistics is 160 with the p-value < 0.001. We can use linear model to fit our regression. After adjusting for demographics, socioeconomic status, behavior risk factors, and environmental conditions, the estimate coefficient of PM2.5 exposure is 0.09 with a p-value < 0.001, which indicates 1 ug/m^3 increase of 17-years average PM2.5 exposure is associated with 9.1% increase of COVID-19 mortality rate on the county-level. In addition, coefficients of the older age distribution, the percentage of people living in poverty, the percentage of hispanic population, and the percentage of current smoker were all significant at the 5% level, which showed that these factors were strong predictors for COVID-19 mortality rate in a relatively longer time window (from March 2020 to November 2021).
+
+Specifically, the results showed a significant inequity situation in COVID-19 related health disparities among some vulnerable population. We found a 19.4% increase in COVID-19 mortality risk was significantly associated with a 1-SD (per 6.3%) increase in the percentage of people with less than high school education within county-level. It also suggested that a 4.4% increase in the percentage of people aged over 65 was significantly associated with a 19.9% increase in COVID-19 death risk. In addition, we did not find significant association between percentage of black population and COVID-19 mortality risk on the county-level.
+
+
+### Pre-vaccination Data up until Apr. 15, 2021
+```{r}
+# Mortality Date up until Apr. 15, 2021
+# Adjusted by demographics, socioeconomic status, behavior risk factors, and environmental conditions
+# Scale covariates in order to make it easier to interpret regression coeffcients
+
+lm_fit_adjusted_bfVax = lm(log(1 + Mortality) ~ mean_pm25 + 
+                        scale(smoke) + 
+                        scale(obese) + 
+                        scale(poverty) + 
+                        scale(no_grad) + 
+                        scale(owner_occupied) + 
+                        scale(blk_pct) + 
+                        scale(hispanic_pct) +
+                        scale(age_pct_65_plus) +
+                        scale(age_pct_45_65) +
+                        scale(age_pct_15_44) +
+                        scale(log(population_density)) +
+                        scale(log(median_household_income)) +
+                        scale(log(median_house_value)) +
+                        scale(mean_summer_temp) + scale(mean_winter_temp) + scale(mean_summer_rm) + scale(mean_winter_rm) +
+                        offset(log(Population)), data = reg_data_bfVax)
+
+summary(lm_fit_adjusted_bfVax)
+#lsmeans(lm_fit_adjusted_bfVax, ~ mean_pm25)
+#> summary(reg_data_bfVax$age_pct_65_plus)
+#   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+#0.03855 0.14829 0.17280 0.17635 0.19944 0.53106
+# Std. Dev. of age_pct_65_plus = .044
+#lsmeans(lm_fit_adjusted_bfVax, "mean_pm25", by = "age_pct_65_plus", at = list(age_pct_65_plus = c(0.13, 0.22)))
+
+```
+
+**Pre-vaccination Data up until Apr. 15, 2021**: Overall, the F-statistics is 159.5 with the p-value < 0.001. We can use linear model to fit our regression. After adjusting for demographics, socioeconomic status, behavior risk factors, and environmental conditions, the estimate coefficient of PM2.5 exposure is 0.08 with a p-value < 0.001, which indicates 1 ug/m^3 increase of 17-years average PM2.5 exposure is associated with 8% increase of COVID-19 mortality rate on the county-level. In addition, coefficients of the older age distribution, the percentage of people living in poverty, the percentage of black and hispanic population, and the percentage of current smoker were all significant at the 5% level, which showed that these factors were strong predictors for COVID-19 mortality rate before COVID-19 Vaccine become nationwide available (from March 2020 to mid-Apr 2021).
+
+In addition, we observed a sightly decrease in the magnitude of estimate coefficient for PM2.5 exposure comparing to linear model based on full data. One of the reason may be that PM2.5 exposure has delayed long-term health effect on COVID-related mortality risk. So we observed a stronger effect in pre-vaccination dataset up until Apr. 15, 2021. 
+
+Specifically, the results also showed a significant inequity situation in COVID-19 related health disparities among some vulnerable population. We found a 20.6% increase in COVID-19 mortality risk was significantly associated with a 1-SD increase in the percentage of people with less than high school education within county-level. It also suggested that a 1-SD increase in the percentage of people aged over 65 was significantly associated with a 25.1% increase in COVID-19 death risk. In addition, we found a significant positive association between percentage of black population and COVID-19 mortality risk on the county-level.
+
+If we compare two linear models above, we can see a decrease of estimate coefficient for `no_grad` and `age_pct_65_plus` after the launch of COVID-19 vaccination campaigns, which means that COVID-19 vaccine mitigates the effect of demographics/socioeconomic status on COVID-19 mortality risk. We also found a no significant association between percentage of black population and COVID-19 mortality risk after including more data points after vaccination. The result also suggests that COVID-19 vaccination protects vulnerable population like black people from Covid-19 deaths.
+
+
+## Step 3: Logistic Regression Model: predict odds of COVID-19 mortality >= median value (compared to COVID-19 mortality rate less than median value) for Full Data and Pre-vaccination Data
+
+Since there are extreme values in COVID-19 mortality rates of large metropolitan like NYC, LA, etc., we also dichotimized mortality into a binary variable (for example, in full data, >= 14.07 deaths per 100,000 vs. < 14.07 deaths per 100,000) and again fit the associations using logistic regression models:
+
+```{r}
+
+reg_data_log <- reg_data %>%
+   mutate(Mortality_new = ifelse(Mortality >= 14.07, 1, 0))
+
+logit_fit_adjusted = glm(Mortality_new ~ mean_pm25 + 
+                        scale(smoke) + 
+                        scale(obese) + 
+                        scale(poverty) + 
+                        scale(no_grad) + 
+                        scale(owner_occupied) + 
+                        scale(blk_pct) + 
+                        scale(hispanic_pct) +
+                        scale(age_pct_65_plus) +
+                        scale(age_pct_45_65) +
+                        scale(age_pct_15_44) +
+                        scale(log(population_density)) +
+                        scale(log(median_household_income)) +
+                        scale(log(median_house_value)) +
+                        scale(mean_summer_temp) + scale(mean_winter_temp) + scale(mean_summer_rm) + scale(mean_winter_rm)
+                        , data = reg_data_log, family = "binomial")
+
+summary(logit_fit_adjusted)
+exp(coef(logit_fit_adjusted))
+
+```
+
+**Full Data up until Nov. 1, 2021**: The estimate coefficient could be interpreted as the probability of COVID-19 mortality rate >= 14.07 deaths per 100,000 associated with a 1 μg/m3 change in 17-years average PM2.5 exposure on county-level. Comparing to linear regression model, the estimate coefficient of PM2.5 exposure in logistic regression is not sigificant on the 5% level, which may suggest that linear regression model is better to fit the relationship of COVID-19 mortality risk and PM2.5 exposure in a relatively longer time window (from March 2020 to November 2021). 
+
+Similar to findings in the linear regressions results, after adjusting for confounders, coefficients of the age distribution, the percentage of people with less than high school education, the median house value were all significant at the 5% level, which showed that these factors were strong predictors for odds of higher COVID-19 mortality risk in a relatively longer time window (from March 2020 to November 2021).
+
+
+```{r}
+
+reg_data_log_bfVax <- reg_data_bfVax %>%
+   mutate(Mortality_new = ifelse(Mortality >= 10.08, 1, 0))
+
+logit_fit_adjusted_bfVax = glm(Mortality_new ~ mean_pm25 + 
+                        scale(smoke) + 
+                        scale(obese) + 
+                        scale(poverty) + 
+                        scale(no_grad) + 
+                        scale(owner_occupied) + 
+                        scale(blk_pct) + 
+                        scale(hispanic_pct) +
+                        scale(age_pct_65_plus) +
+                        scale(age_pct_45_65) +
+                        scale(age_pct_15_44) +
+                        scale(log(population_density)) +
+                        scale(log(median_household_income)) +
+                        scale(log(median_house_value)) +
+                        scale(mean_summer_temp) + scale(mean_winter_temp) + scale(mean_summer_rm) + scale(mean_winter_rm)
+                        , data = reg_data_log_bfVax, family = "binomial")
+
+summary(logit_fit_adjusted_bfVax)
+exp(coef(logit_fit_adjusted_bfVax))
+
+
+```
+
+**Pre-vaccination Data up until Apr. 15, 2021**: Similar to full dataset, the estimate coefficient could be interpreted as the probability of COVID-19 mortality rate >= 10.08 deaths per 100,000 associated with a 1 μg/m3 change in 17-years average PM2.5 exposure on county-level. Comparing to linear regression model, the estimate coefficient of PM2.5 exposure in logistic regression is not sigificant on the 5% level, which may suggest that linear regression model is better to fit the relationship of COVID-19 mortality risk and PM2.5 exposure before COVID-19 Vaccine become nationwide available (from March 2020 to mid-Apr 2021). 
+
+
+In addition, coefficients of the age distribution, the percentage of people with less than high school education, the percentage of black and hispanic population, and the percentage of current smoker were all significant at the 5% level, which showed that these factors were strong predictors for odds of higher COVID-19 mortality risk before COVID-19 Vaccine become nationwide available (from March 2020 to mid-Apr 2021).
+
+If we compare two linear models above, the results also showed a mitigation effect of vaccination on COVID-19 death regarding various health disparities among vulnerable population. We found no significant coefficient estimates for `poverty`, `smoke`, `blk_pct`, `hispanic_pct` and `age_pct_65_plus` after including more data points after vaccination. The result suggested that COVID-19 vaccine mitigated the effect of demographics/socioeconomic status on COVID-19 mortality risk across county-level. In other words, COVID-19 vaccinations protect vulnerable population like black people, people aged over 65, and people living in poverty from Covid-19 deaths.
+
