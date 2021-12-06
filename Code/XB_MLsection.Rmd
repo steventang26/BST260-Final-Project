@@ -11,11 +11,28 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ### Load Libraries
 
-```{r}
-library("dplyr")
+```{r echo = FALSE}
+
+#libraries
+library(dplyr)
 library(stringr)
+library(tidyverse)
 library(RCurl)
 library(httr)
+library(caret)
+library(ggplot2)
+library(mlbench)
+library(Boruta)
+library("DataExplorer")
+library(ggstatsplot)
+library(ggcorrplot)
+library(lares)
+library(randomForest)
+library("faux")
+library(skimr)
+library(nnet)
+library(e1071)
+set.seed(260)
 ```
 
 ## Load Preprocess data
@@ -23,35 +40,226 @@ library(httr)
 You can also embed plots, for example:
 
 ```{r}
-df = read.csv("aggregate_pm_census_cdc.csv")
-head(df)
-dim(df)
+df_complete = read.csv("../Data/aggregate_pm_census_cdc.csv")
+dim(df_complete) # shape of data
+head(df_complete) # brief look at data
+names(df_complete) # all included variables
 ```
 
 There are a total of 47 variables in this data that was combined from [multiple sources](https://github.com/steventang26/BST260-Final-Project/blob/master/README.md).
+Of this data there are over 3000 counties and resulting dependent variables--which
+we are looking at either COVID cases or COVID deaths.
+
+```{r}
+
+# drop all repeated variables and keep wanted 
+# keep Population as the correct variable
+todrop = c("fips","Admin2","Recovered","Active", "q_popdensity","Last_Update", "year", "median_household_income", "no_grad_mcare", "no_grad", "Country_Region", "NAME", "population")
+
+df_prelim <- df_complete %>% 
+  select(-todrop) %>% 
+  subset(Province_State != "Utah") %>% 
+  rename_all(recode, Combined_Key = "County") %>% 
+  remove_rownames %>% 
+  column_to_rownames(var = "County") %>% 
+  select(-Province_State)# Utah reported no cases or deaths info
+  
+names(df_prelim)
+glimpse(df_prelim)
+```
+
 
 ### Exploratory Data Analysis
 
+```{r}
+#states = rownames(df[which(df["Deaths"] > 10000),]) #points to label
+#rownames(df[states,])
+
+plot_intro(df_prelim) # shows data.nas
+#ggstatsplot::ggcorrmat(
+#  data = df,
+#  type = "parametric", 
+#  colors = c("darkred", "white", "steelblue")) # change default colors
+
+## too many variables in ugly correlation plot
+
+  #geom_text(label = rownames(df[states,]))
+
+corr_cross(df_prelim, 
+  max_pvalue = 0.05, # display only significant correlations (at 5% level)
+  top = 15) # display top 10 couples of variables (by correlation coefficient)
+
+
+```
+
+```{r}
+
+# dropping these variabls as redundant with age_pct variables avoid collinearity
+todropmore = c("mid_pecent", "prime_pecent", "older_pecent" ,"young_pecent") 
+
+df <- df_prelim %>% 
+  select(-todropmore)
+
+plot_correlation(df)
+
+# Picture of Variables
+skimmed <- skim_to_wide(df)
+skimmed[, c(1:5,8:12)]
+
+
+#ggplot(df, aes(x = Confirmed, y = Deaths)) +
+#  geom_point(size = 1) +
+#  scale_x_log10() +
+#  scale_y_log10() ## kind of useless plot
+
+corr_cross(df, 
+  max_pvalue = 0.05, # display only significant correlations (at 5% level)
+  top = 15)
+
+# highest correlations with COVID deaths
+corr_var(df, # name of dataset
+  Deaths, # name of variable to focus on
+  top = 20 # display top 5 correlations
+)
+
+#find cases with NAs
+df_missing = df[!complete.cases(df), ]
+df_missing #showing rows
+dim(df)
+# removed 1 county with no smoke data
+df <- df[!(row.names(df) %in% "Oglala Lakota, South Dakota, US"), ]
+
+plot_intro(df)
+
+```
+
+Preliminary look shows that interestingly PM2.5 values and smoking (negative) have low correlations with COVID death numbers.
+
+### Feature Selection Explore
+
+```{r}
+
+# Define the control using a random forest selection function
+control <- rfeControl(functions = rfFuncs, # random forest
+                      method = "repeatedcv", # repeated cv
+                      repeats = 2, # number of repeats
+                      number = 6) # number of folds
+
+# Independent Variables
+x <- df %>%
+  select(-Deaths) %>%
+  as.data.frame()
+
+# Target variable
+y <- df$Deaths
+
+# Training: 80%; Test: 20%
+set.seed(260)
+inTrain <- createDataPartition(y, p = .80, list = FALSE)[,1]
+x_train <- x[ inTrain, ]
+x_test  <- x[-inTrain, ]
+y_train <- y[ inTrain]
+y_test  <- y[-inTrain]
+
+dim(x_train)
+length(y_train)
+
+# Run RFE
+result_rfe1 <- rfe(x = x_train, 
+                   y = y_train, 
+                   sizes = c(10),
+                   rfeControl = control)
+# ran combination of 10 best predictors
+
+
+# Print the results
+result_rfe1
+
+# Print the selected features
+predictors(result_rfe1)
+
+# Print the results visually
+ggplot(data = result_rfe1, metric = "Accuracy") + theme_bw()
+ggplot(data = result_rfe1, metric = "Kappa") + theme_bw()
+
+```
+
+
+### Machine Learning Analysis
+
+```{r}
+
+#split again with deaths variable
+index_train<- createDataPartition(y = df$Deaths, times =1, p=0.8, list = FALSE)
+train_set <- slice(df, index_train)
+test_set <- slice(df, -index_train)
+
+dim(train_set)
+dim(test_set)
+
+
+#using nnet
+mynn <- nnet(Deaths ~ ., data= train_set,
+  size=2, decay=1.0e-5, maxit=50)
+
+preds = predict(mynn, test_set)
+
+
+# Trying SVR Model
+
+#Regression with SVM
+modelsvm = svm(Y~X,data)
+
+#Predict using SVM regression
+predYsvm = predict(modelsvm, data)
+
+#Overlay SVM Predictions on Scatter Plot
+points(data$X, predYsvm, col = "red", pch=16)
+
+#Regression with SVM
+modelsvm = svm(Deaths ~ ., train_set)
+
+#Predict using SVM regression
+predYsvm = predict(modelsvm, test_set)
+
+
+#just to see
+rownames(test_set)[10:20]
+test_set$Deaths[10:20]
+predYsvm[10:20]
+
+summary(modelsvm)
+
+## Tuning SVR model by varying values of maximum allowable error and cost parameter
+
+#Tune the SVM model
+OptModelsvm = tune(svm, Deaths ~ ., data = train_set, ranges=list(elsilon=seq(0,1,0.2), cost = 10:100))
+
+#Print optimum value of parameters
+print(OptModelsvm)
+
+#Plot the performance of SVM Regression model
+plot(OptModelsvm)
+
+```
+
+
+```{r}
+# determine the variables to run on
+# should i run a lasso?
+
+```
+
+
 
 ```{r}
 
 ```
 
-### Some interesting plots
-
-```{r eval = FALSE}
-
-```
 
 ```{r}
 
 ```
-
-
-```{r}
-
-```
-
 
 
 ```{r}
@@ -64,13 +272,6 @@ There are a total of 47 variables in this data that was combined from [multiple 
 ```
 
 
+https://towardsdatascience.com/effective-feature-selection-recursive-feature-elimination-using-r-148ff998e4f7
 
-```{r}
-
-```
-
-
-
-```{r}
-
-```
+https://topepo.github.io/caret/train-models-by-tag.html#neural-network
