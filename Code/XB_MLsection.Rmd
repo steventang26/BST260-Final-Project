@@ -110,7 +110,7 @@ skimmed[, c(1:5,8:12)]
 #ggplot(df, aes(x = Confirmed, y = Deaths)) +
 #  geom_point(size = 1) +
 #  scale_x_log10() +
-#  scale_y_log10() ## kind of useless plot
+#  scale_y_log10() ## not a meaningful plot
 
 corr_cross(df, 
   max_pvalue = 0.05, # display only significant correlations (at 5% level)
@@ -167,7 +167,7 @@ length(y_train)
 # Run RFE
 result_rfe1 <- rfe(x = x_train, 
                    y = y_train, 
-                   sizes = c(10),
+                   sizes = 10,
                    rfeControl = control)
 # ran combination of 10 best predictors
 
@@ -185,9 +185,9 @@ ggplot(data = result_rfe1, metric = "Kappa") + theme_bw()
 ```
 
 
-### Machine Learning Analysis
+### Machine Learning Analysis `Support Vector Regression`
 
-```{r}
+```{r cache = TRUE}
 
 #split again with deaths variable
 index_train<- createDataPartition(y = df$Deaths, times =1, p=0.8, list = FALSE)
@@ -199,29 +199,21 @@ dim(test_set)
 
 
 #using nnet
-mynn <- nnet(Deaths ~ ., data= train_set,
+mynn <- nnet(Deaths ~ ., data = select(train_set),
   size=2, decay=1.0e-5, maxit=50)
 
 preds = predict(mynn, test_set)
+RMSE(preds, test_set$Deaths)
+
+R2(preds, test_set$Deaths)
 
 
-# Trying SVR Model
-
-#Regression with SVM
-modelsvm = svm(Y~X,data)
-
-#Predict using SVM regression
-predYsvm = predict(modelsvm, data)
-
-#Overlay SVM Predictions on Scatter Plot
-points(data$X, predYsvm, col = "red", pch=16)
-
+## Trying SVR Model
 #Regression with SVM
 modelsvm = svm(Deaths ~ ., train_set)
 
 #Predict using SVM regression
 predYsvm = predict(modelsvm, test_set)
-
 
 #just to see
 rownames(test_set)[10:20]
@@ -229,6 +221,17 @@ test_set$Deaths[10:20]
 predYsvm[10:20]
 
 summary(modelsvm)
+
+W = t(modelsvm$coefs) %*% modelsvm$SV
+
+#Find value of b
+b = modelsvm$rho
+
+## RMSE for SVR Model
+
+#Calculate RMSE 
+RMSEsvm=rmse(predYsvm,test_set$Deaths)
+RMSEsvm
 
 ## Tuning SVR model by varying values of maximum allowable error and cost parameter
 
@@ -241,8 +244,37 @@ print(OptModelsvm)
 #Plot the performance of SVM Regression model
 plot(OptModelsvm)
 
+#Find out the best model
+BstModel=OptModelsvm$best.model
+
+#Predict Y using best model
+PredYBst=predict(BstModel,test_set)
+
+#Calculate RMSE of the best model 
+RMSEBst=rmse(PredYBst,test_set$Deaths)
+RMSEBst #better RMSE value than untuned model
+
+##Calculate parameters of the Best SVR model
+
+#Find value of W
+Wbest = t(BstModel$coefs) %*% BstModel$SV
+
+
+#Find value of b
+b_best = BstModel$rho
+
+RMSE(PredYBst, test_set$Deaths)
+modelsvm = svm(Deaths ~ ., train_set)
+# not very good performance on the models thru RMSE and Rsquared values
+
+
+# simpler approach is to 
+mean(df$Deaths)
+
 ```
 
+
+Considerations: What if I 
 
 ```{r}
 # determine the variables to run on
@@ -257,10 +289,6 @@ plot(OptModelsvm)
 ```
 
 
-```{r}
-
-```
-
 
 ```{r}
 
@@ -273,5 +301,4 @@ plot(OptModelsvm)
 
 
 https://towardsdatascience.com/effective-feature-selection-recursive-feature-elimination-using-r-148ff998e4f7
-
 https://topepo.github.io/caret/train-models-by-tag.html#neural-network
