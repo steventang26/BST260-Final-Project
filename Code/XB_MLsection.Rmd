@@ -1,5 +1,5 @@
 ---
-title: "BST260Final_Project_XB_MLsection"
+title: "BST260 Final Project XB Machine Learning Section"
 author: "Xiang Bai"
 date: "12/3/2021"
 output: html_document
@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ### Load Libraries
 
-```{r echo = FALSE}
+```{r, echo = FALSE}
 
 #libraries
 library(dplyr)
@@ -54,7 +54,8 @@ we are looking at either COVID cases or COVID deaths.
 
 # drop all repeated variables and keep wanted 
 # keep Population as the correct variable
-todrop = c("fips","Admin2","Recovered","Active", "q_popdensity","Last_Update", "year", "median_household_income", "no_grad_mcare", "no_grad", "Country_Region", "NAME", "population")
+todrop = c("fips","Admin2","Active", "q_popdensity","Last_Update", "year", "Country_Region", "NAME", "population", "poverty_mcare", "Recovered")
+
 
 df_prelim <- df_complete %>% 
   select(-todrop) %>% 
@@ -62,7 +63,8 @@ df_prelim <- df_complete %>%
   rename_all(recode, Combined_Key = "County") %>% 
   remove_rownames %>% 
   column_to_rownames(var = "County") %>% 
-  select(-Province_State)# Utah reported no cases or deaths info
+  select(-Province_State) %>% # Utah reported no cases or deaths info
+  mutate(rate = (Deaths / (Population / 100000)))
   
 names(df_prelim)
 glimpse(df_prelim)
@@ -85,26 +87,26 @@ plot_intro(df_prelim) # shows data.nas
 
   #geom_text(label = rownames(df[states,]))
 
-corr_cross(df_prelim, 
-  max_pvalue = 0.05, # display only significant correlations (at 5% level)
-  top = 15) # display top 10 couples of variables (by correlation coefficient)
-
-
 ```
 
 ```{r}
 
 # dropping these variabls as redundant with age_pct variables avoid collinearity
-todropmore = c("mid_pecent", "prime_pecent", "older_pecent" ,"young_pecent") 
+todropmore = c("mid_pecent", "prime_pecent", "older_pecent" ,"young_pecent", "Deaths") 
+
+desvars <- c("rate", "mean_pm25", "smoke", "obese", "poverty", "no_grad", "owner_occupied", "hispanic_pct", "blk_pct", "age_pct_65_plus", "age_pct_45_65", "age_pct_15_44", "population_density", "median_household_income", "median_house_value", "mean_summer_temp", "mean_winter_temp", "mean_summer_rm", "mean_winter_rm")
+
 
 df <- df_prelim %>% 
-  select(-todropmore)
+  select(-todropmore) %>% 
+  select(desvars)
+
 
 plot_correlation(df)
 
 # Picture of Variables
 skimmed <- skim_to_wide(df)
-skimmed[, c(1:5,8:12)]
+skimmed[, c(1,2,4,5,8:12)]
 
 
 #ggplot(df, aes(x = Confirmed, y = Deaths)) +
@@ -116,16 +118,16 @@ corr_cross(df,
   max_pvalue = 0.05, # display only significant correlations (at 5% level)
   top = 15)
 
-# highest correlations with COVID deaths
+# highest correlations with COVID death rates
 corr_var(df, # name of dataset
-  Deaths, # name of variable to focus on
-  top = 20 # display top 5 correlations
-)
+  rate, # name of variable to focus on
+  top = 20, # display top 5 correlations
+  max_pvalue = 0.05)
 
 #find cases with NAs
 df_missing = df[!complete.cases(df), ]
 df_missing #showing rows
-dim(df)
+
 # removed 1 county with no smoke data
 df <- df[!(row.names(df) %in% "Oglala Lakota, South Dakota, US"), ]
 
@@ -133,25 +135,26 @@ plot_intro(df)
 
 ```
 
-Preliminary look shows that interestingly PM2.5 values and smoking (negative) have low correlations with COVID death numbers.
+
+Preliminary look shows that interestingly PM2.5 values, age above 65yo, and smoking have low correlations with COVID death numbers.
 
 ### Feature Selection Explore
 
-```{r}
+#```{r eval= FALSE}
 
 # Define the control using a random forest selection function
 control <- rfeControl(functions = rfFuncs, # random forest
                       method = "repeatedcv", # repeated cv
                       repeats = 2, # number of repeats
-                      number = 6) # number of folds
+                      number = 5) # number of folds
 
 # Independent Variables
 x <- df %>%
-  select(-Deaths) %>%
+  select(-rate) %>%
   as.data.frame()
 
 # Target variable
-y <- df$Deaths
+y <- df$rate
 
 # Training: 80%; Test: 20%
 set.seed(260)
@@ -178,11 +181,7 @@ result_rfe1
 # Print the selected features
 predictors(result_rfe1)
 
-# Print the results visually
-ggplot(data = result_rfe1, metric = "Accuracy") + theme_bw()
-ggplot(data = result_rfe1, metric = "Kappa") + theme_bw()
 
-```
 
 
 ### Machine Learning Analysis `Support Vector Regression`
@@ -190,34 +189,23 @@ ggplot(data = result_rfe1, metric = "Kappa") + theme_bw()
 ```{r cache = TRUE}
 
 #split again with deaths variable
-index_train<- createDataPartition(y = df$Deaths, times =1, p=0.8, list = FALSE)
+index_train<- createDataPartition(y = df$rate, times =1, p=0.8, list = FALSE)
 train_set <- slice(df, index_train)
 test_set <- slice(df, -index_train)
 
 dim(train_set)
 dim(test_set)
 
-
-#using nnet
-mynn <- nnet(Deaths ~ ., data = select(train_set),
-  size=2, decay=1.0e-5, maxit=50)
-
-preds = predict(mynn, test_set)
-RMSE(preds, test_set$Deaths)
-
-R2(preds, test_set$Deaths)
-
-
 ## Trying SVR Model
 #Regression with SVM
-modelsvm = svm(Deaths ~ ., train_set)
+#with top 10 correlated
+modelsvm = svm(rate ~ mean_summer_temp + no_grad + median_house_value + median_household_income+ mean_winter_temp+ poverty+ smoke+ blk_pct+ obese+ age_pct_45_65+ mean_pm25, train_set)
 
 #Predict using SVM regression
 predYsvm = predict(modelsvm, test_set)
 
 #just to see
-rownames(test_set)[10:20]
-test_set$Deaths[10:20]
+test_set$rate[10:20]
 predYsvm[10:20]
 
 summary(modelsvm)
@@ -230,13 +218,13 @@ b = modelsvm$rho
 ## RMSE for SVR Model
 
 #Calculate RMSE 
-RMSEsvm=rmse(predYsvm,test_set$Deaths)
+RMSEsvm=rmse(predYsvm,test_set$rate)
 RMSEsvm
-
+R2(predYsvm,test_set$rate)
 ## Tuning SVR model by varying values of maximum allowable error and cost parameter
 
 #Tune the SVM model
-OptModelsvm = tune(svm, Deaths ~ ., data = train_set, ranges=list(elsilon=seq(0,1,0.2), cost = 10:100))
+OptModelsvm = tune(svm, rate ~ mean_summer_temp + no_grad + median_house_value + median_household_income+ mean_winter_temp+ poverty+ smoke+ blk_pct+ obese+ age_pct_45_65+ mean_pm25, data = train_set, ranges=list(elsilon=seq(0,1,0.5), cost = 1:100))
 
 #Print optimum value of parameters
 print(OptModelsvm)
@@ -245,42 +233,40 @@ print(OptModelsvm)
 plot(OptModelsvm)
 
 #Find out the best model
-BstModel=OptModelsvm$best.model
+#BstModel=OptModelsvm$best.model
 
 #Predict Y using best model
-PredYBst=predict(BstModel,test_set)
+#PredYBst=predict(BstModel,test_set)
 
 #Calculate RMSE of the best model 
-RMSEBst=rmse(PredYBst,test_set$Deaths)
-RMSEBst #better RMSE value than untuned model
+#RMSEBst=rmse(PredYBst,test_set$rate)
+#RMSEBst #better RMSE value than untuned model
 
 ##Calculate parameters of the Best SVR model
 
 #Find value of W
-Wbest = t(BstModel$coefs) %*% BstModel$SV
-
+#Wbest = t(BstModel$coefs) %*% BstModel$SV
 
 #Find value of b
-b_best = BstModel$rho
+#b_best = BstModel$rho
 
-RMSE(PredYBst, test_set$Deaths)
-modelsvm = svm(Deaths ~ ., train_set)
-# not very good performance on the models thru RMSE and Rsquared values
+#RMSE(PredYBst, test_set$rate)
+#modelsvm = svm(rate ~ ., train_set)
 
-
+# not very good performance on the models thru RMSE and Squared values
 # simpler approach is to 
-mean(df$Deaths)
+#mean(df$rate)
 
 ```
 
 
-Considerations: What if I 
 
 ```{r}
 # determine the variables to run on
 # should i run a lasso?
 
-```
+
+
 
 
 
