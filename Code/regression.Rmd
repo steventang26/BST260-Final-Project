@@ -235,8 +235,6 @@ logit_fit_adjusted_bfVax = glm(Mortality_new ~ mean_pm25 +
 
 summary(logit_fit_adjusted_bfVax)
 exp(coef(logit_fit_adjusted_bfVax))
-
-
 ```
 
 **Pre-vaccination Data up until Apr. 15, 2021**: Similar to full dataset, the estimate coefficient could be interpreted as the probability of COVID-19 mortality rate >= 10.08 deaths per 100,000 associated with a 1 μg/m3 change in 17-years average PM2.5 exposure on county-level. Comparing to linear regression model, the estimate coefficient of PM2.5 exposure in logistic regression is not sigificant on the 5% level, which may suggest that linear regression model is better to fit the relationship of COVID-19 mortality risk and PM2.5 exposure before COVID-19 Vaccine become nationwide available (from March 2020 to mid-Apr 2021). 
