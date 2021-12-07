@@ -155,6 +155,85 @@ aggregate_pm_census_cdc <- aggregate_pm_census_cdc[is.na(aggregate_pm_census_cdc
 
 ```
 
+# Part 0: Maps of the US Covariates
+
+```{r}
+library(maps)
+library(stringr)
+library(RColorBrewer)
+library(shiny)
+library(shinythemes)
+
+AllCounty <- map_data("county")
+AllCounty %>% ggplot(aes(x = long, y = lat, group = group)) +
+              geom_polygon(color = "red", fill = NA)
+
+AllCounty$region <- str_to_title(AllCounty$region)
+AllCounty$subregion <- str_to_title(AllCounty$subregion)
+
+AllCounty <- left_join (AllCounty, aggregate_pm_census_cdc, by = c("region" = "Province_State", "subregion" = "Admin2")) 
+
+
+
+
+AllCounty %>% ggplot(aes(x = long, y = lat, group = group, fill = mean_pm25)) + 
+   scale_color_discrete(name = "Average PM 2.5") +
+                geom_polygon(color = "black") +
+                scale_fill_gradientn(colors = brewer.pal(9, "Reds"), trans = "log10") +
+   theme(panel.grid.major = element_blank(), 
+         panel.background = element_blank(),
+         axis.title = element_blank(), 
+         axis.text = element_blank(),
+         axis.ticks = element_blank())
+                coord_fixed(1.3)
+   
+                
+              
+  # Define UI
+  shinyApp(           
+ui = fluidPage( 
+    titlePanel("Life Expectancy in the US over Time"),
+    
+    # Sidebar
+    sidebarLayout(
+        
+        # Widgets for selection
+        sidebarPanel(  radioButtons(inputId = "covariate", label = "Select a Covariate",
+                         choices = c("mean_pm25 ", "mean_winter_temp", "mean_summer_temp ")),
+        ),
+        
+        # Main panel
+        mainPanel(
+            # Plot
+            plotOutput("plot")
+        )
+    )
+)
+,
+server = function(input, output){
+    output$plot = renderPlot({
+    ggplot(data = AllCounty, aes_string(x = 'long', y = 'lat', group = 'group', fill = input$covariate)) + 
+   scale_color_discrete(name = "Average PM 2.5") +
+                geom_polygon(color = "black") +
+                scale_fill_gradientn(colors = brewer.pal(9, "Reds"), trans = "log10") +
+   theme(panel.grid.major = element_blank(), 
+         panel.background = element_blank(),
+         axis.title = element_blank(), 
+         axis.text = element_blank(),
+         axis.ticks = element_blank())+
+          coord_fixed(1.3) +
+        ggtitle(paste(input$covariate, "arrests per 100,000 (log scale)"))
+    })
+}
+
+)
+
+                
+                
+```
+
+
+
 # Part 1: Regression models: predicting COVID mortality risk
 
 In Part I, we will firstly summarize the characteristics of the US county-level study cohort up to Nov. 1, 2021. Then we will be using linear regression models to predict mean COVID mortality rate (per 100,000), and logistic regression models to predict the probablity of mortality rate >= median value.
@@ -279,6 +358,8 @@ lm_fit_adjusted = lm(log(1 + Mortality) ~ mean_pm25 +
 
 summary(lm_fit_adjusted)
 lsmeans(lm_fit_adjusted, ~ mean_pm25)
+
+??lsmeans
           
 ```
 
