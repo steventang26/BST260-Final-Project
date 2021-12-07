@@ -163,10 +163,12 @@ library(stringr)
 library(RColorBrewer)
 library(shiny)
 library(shinythemes)
+library(ggplot2)
+library(magrittr)
+
 
 AllCounty <- map_data("county")
-AllCounty %>% ggplot(aes(x = long, y = lat, group = group)) +
-              geom_polygon(color = "red", fill = NA)
+
 
 AllCounty$region <- str_to_title(AllCounty$region)
 AllCounty$subregion <- str_to_title(AllCounty$subregion)
@@ -174,46 +176,70 @@ AllCounty$subregion <- str_to_title(AllCounty$subregion)
 AllCounty <- left_join (AllCounty, aggregate_pm_census_cdc, by = c("region" = "Province_State", "subregion" = "Admin2")) 
 
 
+AllCounty %<>% mutate(Mortality = Deaths/Population * 100000)
+
+AllCounty %<>% rename(PM2.5 = mean_pm25,
+                      Winter_Temperature = mean_winter_temp,
+                      Summer_Temperature = mean_summer_temp,
+                      Smoking = smoke, 
+                      Obesity= obese, 
+                      Poverty = poverty, 
+                      With_HS_Degrees = no_grad, 
+                      Homeowner = owner_occupied, 
+                      Black = blk_pct, 
+                      Hispanic = hispanic_pct, 
+                      Older_Adults = age_pct_65_plus, 
+                      Population_Density =population_density,
+                      Income =median_household_income, 
+                      House_Value = median_house_value
+)
+
+```
 
 
-AllCounty %>% ggplot(aes(x = long, y = lat, group = group, fill = mean_pm25)) + 
-   scale_color_discrete(name = "Average PM 2.5") +
-                geom_polygon(color = "black") +
-                scale_fill_gradientn(colors = brewer.pal(9, "Reds"), trans = "log10") +
-   theme(panel.grid.major = element_blank(), 
-         panel.background = element_blank(),
-         axis.title = element_blank(), 
-         axis.text = element_blank(),
-         axis.ticks = element_blank())
-                coord_fixed(1.3)
-   
-                
-              
+
+
+```{r}
+
   # Define UI
   shinyApp(           
-ui = fluidPage( 
-    titlePanel("Life Expectancy in the US over Time"),
     
-    # Sidebar
-    sidebarLayout(
-        
-        # Widgets for selection
-        sidebarPanel(  radioButtons(inputId = "covariate", label = "Select a Covariate",
-                         choices = c("mean_pm25 ", "mean_winter_temp", "mean_summer_temp ")),
-        ),
-        
-        # Main panel
-        mainPanel(
-            # Plot
-            plotOutput("plot")
-        )
-    )
+ui <- fluidPage(
+  fluidRow(
+    column(4,
+      radioButtons(inputId = "covariate", label = "Select a Covariate",
+                         choices = c('PM2.5',
+                      'Winter_Temperature',
+                      'Summer_Temperature',
+                      'Smoking' , 
+                      'Obesity' , 
+                      'Poverty' , 
+                      'With_HS_Degrees', 
+                      'Homeowner' , 
+                      'Black' , 
+                      'Hispanic', 
+                      "Older_Adults" , 
+                      'Population_Density' ,
+                      'Income', 
+                      "House_Value")),
+      
+    ),
+    column(8, plotOutput("plot_static"))
+  ),
+  fluidRow(
+     column(4, 
+    ),
+    column(8, plotOutput("plot")),
+    
+  )
 )
+
+
 ,
 server = function(input, output){
     output$plot = renderPlot({
     ggplot(data = AllCounty, aes_string(x = 'long', y = 'lat', group = 'group', fill = input$covariate)) + 
-   scale_color_discrete(name = "Average PM 2.5") +
+   scale_color_discrete(name = input$covariate) +
                 geom_polygon(color = "black") +
                 scale_fill_gradientn(colors = brewer.pal(9, "Reds"), trans = "log10") +
    theme(panel.grid.major = element_blank(), 
@@ -222,8 +248,32 @@ server = function(input, output){
          axis.text = element_blank(),
          axis.ticks = element_blank())+
           coord_fixed(1.3) +
-        ggtitle(paste(input$covariate, "arrests per 100,000 (log scale)"))
+        ggtitle(paste(
+          ifelse( input$covariate %in% c('PM2.5',
+                      'Winter_Temperature',
+                      'Summer_Temperature',
+                      'Population_Density' ,
+                      'Income', 
+                      "House_Value"), "Average", "Percent"), 
+          input$covariate,
+          "(log scale)"))
     })
+    
+    output$plot_static = renderPlot({
+    ggplot(data = AllCounty, aes_string(x = 'long', y = 'lat', group = 'group', fill = 'Mortality')) + 
+   scale_color_discrete(name = "Mortality") +
+                geom_polygon(color = "black") +
+                scale_fill_gradientn(colors = brewer.pal(9, "Reds"), trans = "log10") +
+   theme(panel.grid.major = element_blank(), 
+         panel.background = element_blank(),
+         axis.title = element_blank(), 
+         axis.text = element_blank(),
+         axis.ticks = element_blank())+
+          coord_fixed(1.3) +
+        ggtitle(paste("Covid-19 Deaths per 100,000"))
+    })
+    
+    
 }
 
 )
