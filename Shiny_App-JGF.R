@@ -1,0 +1,167 @@
+library(maps)
+library(stringr)
+library(RColorBrewer)
+library(shiny)
+library(shinythemes)
+library(ggplot2)
+library(magrittr)
+library(dplyr)
+library(stringr)
+library(RCurl)
+library(httr)
+
+aggregate_pm_census_cdc <- read.csv(text = getURL('https://raw.githubusercontent.com/steventang26/BST260-Final-Project/master/aggregate_pm_census_cdc_211031.csv'))
+
+AllCounty <- map_data("county")
+
+
+AllCounty$region <- str_to_title(AllCounty$region)
+AllCounty$subregion <- str_to_title(AllCounty$subregion)
+
+AllCounty <- left_join (AllCounty, aggregate_pm_census_cdc, by = c("region" = "Province_State", "subregion" = "Admin2")) 
+
+
+AllCounty %<>% mutate(Mortality = Deaths/Population * 100000,
+                      mean_winter_temp = (mean_winter_temp - 273.15)*1.8 + 32,
+                      mean_summer_temp = (mean_summer_temp - 273.15)*1.8 + 32,  )
+
+
+AllCounty %<>% rename(PM2.5 = mean_pm25,
+                      Winter_Temperature = mean_winter_temp,
+                      Summer_Temperature = mean_summer_temp,
+                      Smoking = smoke, 
+                      Obesity= obese, 
+                      Poverty = poverty, 
+                      With_HS_Degrees = no_grad, 
+                      Homeowner = owner_occupied, 
+                      Black = blk_pct, 
+                      Hispanic = hispanic_pct, 
+                      Older_Adults = age_pct_65_plus, 
+                      Population_Density =population_density,
+                      Income =median_household_income, 
+                      House_Value = median_house_value
+)
+
+
+
+
+
+library(shiny)
+
+
+# Define UI for application that draws a histogram
+ui = fluidPage( 
+    theme=shinytheme("darkly"),
+    titlePanel("A Description of COVID-19 Mortality by County"),
+    tabPanel("Range of County-Level Mortality",
+             sidebarPanel( p("The map to the right shades the counties in the contiguous US by number of reported COVID-19 deaths per 100,000 inidviduals by October 31, 2021. A darker shade of blue reflects counties with more deaths per capita."),
+                           
+                           # Add some space between the text above and animated
+                           # slider bar below
+                           br(),
+                           
+                           # Input: year slider with basic animation
+                           sliderInput("mortality", "Mortality:",
+                                       min = 0, max = 48,
+                                       value = 1, 
+                                       step = 1,
+                                       sep = "",       # keep years in year format and not 1,960 format
+                                       ticks = FALSE,  # don't show tick marks on slider bar
+                                       animate = FALSE)
+                           
+                           
+             ),
+             mainPanel(
+                 # Plot
+                 plotOutput("slider")
+                 #end sidepane,
+             ) #end tab 2
+             
+    ),
+    tabsetPanel(
+        tabPanel("Covariates",
+                 fluidRow(
+                     column(4, p("The maps to the right show the spatial distribution of several relevant county-level covarites. The top map depitcts the number of COVID-19 deaths per 100,000 by October 31,2021-- our outcome of interest. The bottom map depicts the distribution of the county-level covariate of interest. These include PM2.5 (our exposure of interest), as well as mean summer and winter temperatures (measured in degrees Fahrenheit), propotion of smokers, proportion with obesity, proportion living in poverty, proportion with at least a high school degree, proportion who own their home, proportion Black, proportion Hispanic, proportion above 65 years of age, average population density, average income, and average home value. To better show the range of values, the population density, income, and average home value were log transformed. Despite the complications introduced on the ease of understanding the numeric value, the shade of the county still follows intuitive logic. That is, as the shade darkens, the covariate increaes."), 
+                            
+                     ),
+                     column(8, plotOutput("plot_static"))
+                 ),
+                 fluidRow(
+                     column(4,
+                            radioButtons(inputId = "covariate", label = "Select a Covariate",
+                                         choices = c('PM2.5','Winter_Temperature','Summer_Temperature',
+                                                     'Smoking' , 'Obesity' , 'Poverty' , 'With_HS_Degrees', 'Homeowner', 
+                                                     'Black' , 'Hispanic', "Older_Adults" , 'Population_Density' ,
+                                                     'Income',"House_Value")
+                            ),
+                     ),
+                     column(8, plotOutput("plot")),
+                 )
+        )
+        #end tabset Panel
+    ))
+
+server = function(input, output){
+    selected <- reactive(AllCounty %>% filter(Mortality >= input$mortality))
+    output$plot = renderPlot({
+        ggplot(data = AllCounty, aes_string(x = 'long', y = 'lat', group = 'group', fill = input$covariate)) + 
+            scale_color_discrete(name = input$covariate) +
+            geom_polygon(color = "black") +
+            scale_fill_gradientn(colors = brewer.pal(9, "Reds"), trans = ifelse(input$covariate %in% c('Income', 'House_Value', 'Population_Density'),
+                                                                                "log10",
+                                                                                "identity")) +
+            theme(panel.grid.major = element_blank(), 
+                  panel.background = element_blank(),
+                  axis.title = element_blank(), 
+                  axis.text = element_blank(),
+                  axis.ticks = element_blank())+
+            coord_fixed(1.3) +
+            ggtitle(paste(
+                ifelse(input$covariate %in% c('PM2.5',
+                                              'Winter_Temperature',
+                                              'Summer_Temperature',
+                                              'Population_Density' ,
+                                              'Income', 
+                                              "House_Value"), "Average", "Proportion"), 
+                input$covariate, ifelse(input$covariate %in% c('Income', 'House_Value', 'Population_Density'), "(log scale)", "")))
+    })
+    
+    output$plot_static = renderPlot({
+        ggplot(data = AllCounty, aes_string(x = 'long', y = 'lat', group = 'group', fill = 'Mortality')) + 
+            scale_color_discrete(name = "Mortality") +
+            geom_polygon(color = "black") +
+            scale_fill_gradientn(colors = brewer.pal(9, "Reds")) +
+            theme(panel.grid.major = element_blank(), 
+                  panel.background = element_blank(),
+                  axis.title = element_blank(), 
+                  axis.text = element_blank(),
+                  axis.ticks = element_blank())+
+            coord_fixed(1.3) +
+            ggtitle(paste("Covid-19 Deaths per 100,000"))
+    })
+    
+    
+    output$slider = renderPlot({
+        ggplot(data = AllCounty, aes(x = long, y = lat, group = group)) +
+            geom_polygon(color = "red", fill = NA) +
+            
+            geom_polygon(data= selected(), aes_string(x = 'long', y = 'lat', group = 'group', fill = 'Mortality'))+
+            scale_color_discrete(name = "Mortality") +
+            scale_fill_gradientn(colors = brewer.pal(9, "Blues"), trans = "log10") +
+            theme(panel.grid.major = element_blank(), 
+                  panel.background = element_blank(),
+                  axis.title = element_blank(), 
+                  axis.text = element_blank(),
+                  axis.ticks = element_blank())+
+            coord_fixed(1.3) +
+            ggtitle(paste("Counties with at Least", input$mortality, "Reported Deaths per 100,000 by 10/31/21"))+
+            ylab("Deaths per 100,000") +
+            xlab(NULL)
+        
+    })
+    
+    
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
