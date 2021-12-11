@@ -53,7 +53,7 @@ names(df_complete_0415)
 ```
 
 ## Load data
-```{r}
+```{r, warning = FALSE, results='hide'}
 ## load preprocessed data by XB, create a variable for county-level COVID-19 death rate
 df_complete <- aggregate_pm_census_cdc_211031 %>% mutate(rate = (Deaths / (Population / 100000)))
 names(df_complete)
@@ -189,7 +189,7 @@ For model 3 (`mtry = 2`) with only the top 7 most important predictors, we got a
 
 ### Random Forest Model with complete data up until 10/31/2021
 
-We explored how widespread availabilty of vaccines potentially changed the importance of predictors in our models. Therefore, we carried out the following analysis using the complete dataset that contains COVID-19 mortality rate after the introduction of vaccines.
+We explored how widespread availability of vaccines potentially changed the importance of predictors in our models. Therefore, we carried out the following analysis using the complete dataset that contains COVID-19 mortality rate after the introduction of vaccines.
 
 ### Step 1: Split data
 
@@ -260,7 +260,7 @@ tmp_1031 %>% filter(Gini > 20) %>%
       
 Now, the top 10 important predictors have changed: average summer temperature, median house value, % smokers, % >= 65 years of age, median household income, % less than high school education, average pm 2.5, average winter temperature, % 45-65 years of age, % 15-44 years of age, and average summer relative humidity. 
 
-It is important to note that the rank of `mean_pm25` has dropped when using the dataset that contains information after the introduction of vaccines. While evironmental and socioeconomic factors, such as summer temperature and house values, continue to play an important role in predicting COVID-19 mortality rate, the impact of pm 2.5 seems to be alleviated after when taking vaccination into account. Therefore, it is possible that vaccaination has mitigated the negative effect of the long-term pm 2.5 exposure on COVID-19 mortality.
+It is important to note that the rank of `mean_pm25` has dropped when using the dataset that contains information after the introduction of vaccines. While environmental and socioeconomic factors, such as summer temperature and house values, continue to play an important role in predicting COVID-19 mortality rate, the impact of pm 2.5 seems to be alleviated after when taking vaccination into account. Therefore, it is possible that vaccaination has mitigated the negative effect of the long-term pm 2.5 exposure on COVID-19 mortality.
 
 We fitted another moodel with the top 7 important predictors:
 
@@ -281,7 +281,7 @@ There an increase in RMSE (5.25) when using the top 7 important predictors.
 
 ### Random Forest Model with binary outcome (using complete data up until 10/31/2021)
 
-To better understand variable importance and imporve model performance, we fitted a Random Forest model to the training set that predicts `Mortality_bin` based on all of the other variables. Then, we used the predict function to get probability estimates for the test set, and convert the probabilities to predicted response labels (use a cutoff of 0.5). Still, we used `mtry = 18`.
+To better understand variable importance and improve model performance, we fitted a Random Forest model to the training set that predicts `Mortality_bin` based on all of the other variables. Then, we used the predict function to get probability estimates for the test set, and convert the probabilities to predicted response labels (use a cutoff of 0.5). Still, we used `mtry = 18`.
 
 ```{r}
 set.seed(1)
