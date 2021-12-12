@@ -22,7 +22,7 @@ Predict COVID-19 Mortality Risk using Environmental, Behavioral, and Socioeconom
 ## How to Navigate
 Welcome to our final project repository! For the ease of examining all of the work that went into our project, we recommend you open and knit the files in the order best allows for you to follow the projects creation. That is, we recommend that you start by opening our data acquisition and cleaning file to get a better sense of the raw data and the various sources they stem from. This is "WebScraping_1211.Rmd". 
 
-Next, we recommend looking at how COVID-19 mortality, as well as different socioeconomic and environmental factors in our data set vary across the US by using our Shiny App. This can be found in "app.R". A web version can be found here https://jfarmer13.shinyapps.io/County-Level/?_ga=2.54148392.1651180538.1639334084-1021835638.1638130033 . 
+Next, we recommend looking at how COVID-19 mortality, as well as different socioeconomic and environmental factors in our data set vary across the US by using our Shiny App. This can be found in "Shiny_App-JGF.R". A web version can be found here https://jfarmer13.shinyapps.io/County-Level/?_ga=2.54148392.1651180538.1639334084-1021835638.1638130033 . 
 
 Third, we suggest you follow our exploratory analysis with linear and logistic regression. This can be found in the "regression.Rmd" file.
 
@@ -35,15 +35,12 @@ Finally, we recommend you look at the Random Forest analysis that explores simil
 
 For the richest experience of this project, open and knit the files in the following order: 
 
-1. "WebScraping_1211.Rmd"
-
-2. "app.R"
-
-3. "regression.Rmd"
-
-4. "XB_MLsection.Rmd"
-
-5. "Yu Fu Random Forest.Rmd""
+1. Overview
+2. "WebScraping_1211.Rmd"
+3. "Shiny_App-JGF.R"
+4. "regression.Rmd"
+5. "XB_MLsection.Rmd"
+6. "Yu Fu Random Forest.Rmd""
 
 
 
