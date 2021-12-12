@@ -1,0 +1,324 @@
+---
+title: "BST260 Final Project XB Machine Learning Section"
+author: "Xiang Bai"
+date: "12/3/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Load Libraries
+
+```{r, message = FALSE, warning = FALSE}
+
+#libraries
+library(dplyr)
+library(stringr)
+library(tidyverse)
+library(RCurl)
+library(httr)
+library(caret)
+library(ggplot2)
+library(mlbench)
+library(Boruta)
+library("DataExplorer")
+library(ggstatsplot)
+library(ggcorrplot)
+library(lares)
+library(randomForest)
+library("faux")
+library(skimr)
+library(nnet)
+library(e1071)
+library(glmnet)
+set.seed(260)
+```
+
+## Load Preprocess data
+
+You can also embed plots, for example:
+
+```{r}
+df_complete = read.csv("./Data/aggregate_pm_census_cdc.csv")
+dim(df_complete) # shape of data
+head(df_complete,3) # brief look at data
+names(df_complete) # all included variables
+```
+
+There are a total of 47 variables in this data that was combined from [multiple sources](https://github.com/steventang26/BST260-Final-Project/blob/master/README.md).
+Of this data there are over 3000 counties and resulting dependent variables--which
+we are looking at either COVID cases or COVID deaths.
+
+```{r}
+
+# drop all repeated variables and keep wanted 
+# keep Population as the correct variable
+todrop = c("fips","Admin2","Active", "q_popdensity","Last_Update", "year", "Country_Region", "NAME", "population", "poverty_mcare", "Recovered")
+
+
+df_prelim <- df_complete %>% 
+  select(-todrop) %>% 
+  subset(Province_State != "Utah") %>% 
+  rename_all(recode, Combined_Key = "County") %>% 
+  remove_rownames %>% 
+  column_to_rownames(var = "County") %>% 
+  select(-Province_State) %>% # Utah reported no cases or deaths info
+  mutate(Mortality = (Deaths / (Population / 100000)))
+
+glimpse(df_prelim)
+```
+
+
+### Exploratory Data Analysis
+
+```{r}
+#states = rownames(df[which(df["Deaths"] > 10000),]) #points to label
+#rownames(df[states,])
+
+plot_intro(df_prelim) # shows data.nas
+#ggstatsplot::ggcorrmat(
+#  data = df,
+#  type = "parametric", 
+#  colors = c("darkred", "white", "steelblue")) # change default colors
+
+## too many variables in ugly correlation plot
+
+  #geom_text(label = rownames(df[states,]))
+```
+
+```{r}
+
+# dropping these variabls as redundant with age_pct variables avoid collinearity
+todropmore = c("mid_pecent", "prime_pecent", "older_pecent" ,"young_pecent", "Deaths") 
+
+desvars <- c("Mortality", "mean_pm25", "smoke", "obese", "poverty", "no_grad", "owner_occupied", "hispanic_pct", "blk_pct", "age_pct_65_plus", "age_pct_45_65", "age_pct_15_44", "population_density", "median_household_income", "median_house_value", "mean_summer_temp", "mean_winter_temp", "mean_summer_rm", "mean_winter_rm")
+
+
+df <- df_prelim %>% 
+  select(-todropmore) %>% 
+  select(desvars)
+
+
+plot_correlation(df)
+
+# Picture of Variables
+skimmed <- skim_to_wide(df)
+skimmed[, c(1,2,4,5,8:12)]
+
+
+#ggplot(df, aes(x = Confirmed, y = Deaths)) +
+#  geom_point(size = 1) +
+#  scale_x_log10() +
+#  scale_y_log10() ## not a meaningful plot
+
+#corr_cross(df, 
+#  max_pvalue = 0.05, # display only significant correlations (at 5% level)
+#  top = 15)
+
+# highest correlations with COVID death Mortalitys
+corr_var(df, # name of dataset
+  Mortality, # name of variable to focus on
+  top = 20, # display top 5 correlations
+  max_pvalue = 0.05)
+
+#find cases with NAs
+df_missing = df[!complete.cases(df), ]
+df_missing #showing rows
+
+# removed 1 county with no smoke data
+df <- df[!(row.names(df) %in% "Oglala Lakota, South Dakota, US"), ]
+```
+
+
+Preliminary look shows that interestingly PM2.5 values, age above 65yo, and smoking have fairly low correlations with COVID death rates.
+
+### Machine Learning Analysis:`Support Vector Regression`
+
+```{r cache = TRUE}
+
+#split again with deaths variable
+index_train<- createDataPartition(y = df$Mortality, times =1, p=0.8, list = FALSE)
+train_set <- slice(df, index_train)
+test_set <- slice(df, -index_train)
+
+dim(train_set)
+dim(test_set)
+
+## Trying SVR Model
+#Regression with SVM
+#with top 10 correlated
+modelsvm = svm(log(1 + Mortality) ~ mean_summer_temp + no_grad + median_house_value + median_household_income+ mean_winter_temp+ poverty+ smoke+ blk_pct+ obese+ age_pct_45_65+ mean_pm25, train_set, preProcess = c("center","scale"))
+#all variables
+modelsvm2 = svm(log(1 + Mortality) ~ ., train_set, preProcess = c("center","scale"))
+
+#Predict using SVM regression
+predYsvm = predict(modelsvm, test_set)
+predYsvm2 = predict(modelsvm2, test_set)
+
+summary(modelsvm)
+summary(modelsvm2)
+
+#W = t(modelsvm$coefs) %*% modelsvm$SV
+#b = modelsvm$rho
+
+## RMSE for SVR Model
+
+#Calculate RMSE 
+RMSEsvm=rmse(predYsvm,log(1 + test_set$Mortality))
+RMSEsvm2=rmse(predYsvm2, log(1 + test_set$Mortality))
+RMSEsvm
+RMSEsvm2
+R2(predYsvm, log(1 + test_set$Mortality))
+R2(predYsvm2,log(1 + test_set$Mortality))
+
+## Tuning SVR model by varying values of maximum allowable error and cost parameter
+
+#Tune the SVM model
+#OptModelsvm = tune(svm, Mortality ~ ., data = train_set, ranges=list(elsilon=seq(0,1,0.2), cost = 1:10), preProcess = c("center","scale"))
+
+#tunedmodels = tune.svm(Mortality ~ ., data= train_set, kernel="linear", cost=c(0.001, 0.01, 0.1, 1, 5), preProcess = c("center","scale"))
+
+#Print optimum value of parameters
+#print(tunedmodels)
+
+#Plot the performance of SVM Regression model
+#plot(tunedmodels)
+
+#Find out the best model
+# Bestmodel = tunedmodels$best.model
+
+#Predict Y using best model
+# PredYBst=predict(Bestmodel,test_set)
+
+#Calculate RMSE of the best model 
+#RMSEBst=rmse(PredYBst,test_set$Mortality)
+#RMSEBst #better RMSE value than untuned model
+#R2(PredYBst,test_set$Mortality)
+
+```
+
+
+## Regression with `LASSO`
+```{r}
+# determine the variables to run on
+# What if running through LASSO
+
+# Independent Variables
+x <- df %>%
+  select(-Mortality) %>%
+  as.data.frame()
+# Target variable
+y <- df$Mortality
+# Training: 80%; Test: 20%
+set.seed(260)
+inTrain <- createDataPartition(y, p = .80, list = FALSE)[,1]
+x_train <- x[ inTrain, ]
+x_test  <- x[-inTrain, ]
+y_train <- y[ inTrain]
+y_test  <- y[-inTrain]
+
+cv_model = cv.glmnet(as.matrix(x_train), as.matrix(y_train), alpha = 1)
+best_lambda <- cv_model$lambda.min
+best_lambda
+plot(cv_model) 
+
+```
+
+
+
+```{r}
+best_model <- glmnet(as.matrix(x_train), as.matrix(y_train), alpha = 1, lambda = best_lambda)
+
+y_predicted <- predict(best_model, as.matrix(x_train))
+coef(best_model)
+
+#find SST and SSE
+sst <- sum((y_test - mean(y_test))^2)
+sse <- sum((y_predicted - y_test)^2)
+
+y_predicted = predict(best_model, s = best_lambda, as.matrix(x_test))
+
+#find R-Squared
+
+R2(y_predicted, y_test)
+
+```
+
+With running LASSO, the variables that were shrunk are obesity measure, poverty, graduation rate, hispanic population percentage, and seasonal weather variables. Again shows that PM2.5 exposure has a likely effect on death rates due to COVID.
+
+With all above models, we run into issues for a high performance model for numerical predictions. Next step will be to bin mortality and evaluate our covariates such as PM2.5 and others to determine if classification will be better.
+
+
+
+## Running SVM for Binary Mortality prediction above or below median county values
+
+```{r}
+df <- df %>%
+   mutate(Mortality_bin = ifelse(Mortality >= median(Mortality), 1, 0))
+# resep train/test sets
+index_train<- createDataPartition(y = df$Mortality_bin, times =1, p=0.8, list = FALSE)
+train_set <- slice(df, index_train)
+test_set <- slice(df, -index_train)
+
+#used similar formula to LM section 
+model_svm_bin = svm(as.factor(Mortality_bin) ~ mean_pm25 + 
+                        scale(smoke) + 
+                        scale(obese) + 
+                        scale(poverty) + 
+                        scale(no_grad) + 
+                        scale(owner_occupied) + 
+                        scale(blk_pct) + 
+                        scale(hispanic_pct) +
+                        scale(age_pct_65_plus) +
+                        scale(age_pct_45_65) +
+                        scale(age_pct_15_44) +
+                        scale(log(population_density)) +
+                        scale(log(median_household_income)) +
+                        scale(log(median_house_value)) +
+                        scale(mean_summer_temp) + scale(mean_winter_temp) + scale(mean_summer_rm) + scale(mean_winter_rm)
+                        , data = train_set)
+
+#Predict using SVM class
+predYsvm_bin = predict(model_svm_bin, test_set, type = "response")
+
+confusionMatrix(data = as.factor(predYsvm_bin), reference = as.factor(test_set$Mortality_bin))
+
+```
+
+Support Vector Machine achieved a 73% balanced accuracy when determining if a county is above or below the median mortality COVID rate when created with the above variables.
+
+```{r}
+model_svm_bin2 = svm(as.factor(Mortality_bin) ~ ., data = select(train_set, -c(Mortality)), preProcess = c("center","scale"))
+
+#Predict using SVM
+predYsvm_bin2 = predict(model_svm_bin2, test_set, type = "response")
+
+#Calculate RMSE 
+predYsvm_bin2[1:10]
+
+confusionMatrix(data = as.factor(predYsvm_bin2), reference = as.factor(test_set$Mortality_bin), positive = '1')
+
+```
+
+With all covariates included, the predictions naturally have a slightly lower performance. The specificity and sensitivity of the model, although, is quite balanced for the county predictions. 
+
+
+
+
+#### __Resources Visited for Code Reference:__
+
+https://www.statology.org/lasso-regression-in-r/
+
+https://towardsdatascience.com/effective-feature-selection-recursive-feature-elimination-using-r-148ff998e4f7
+
+https://topepo.github.io/caret/train-models-by-tag.html#neural-network
+
+https://www.kdnuggets.com/2017/03/building-regression-models-support-vector-regression.html
+
+https://www.datatechnotes.com/2019/09/support-vector-regression-example-with.html
+
+
+
+
