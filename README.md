@@ -28,7 +28,7 @@ Third, we suggest you follow our exploratory analysis with linear and logistic r
 
 Next, we recommend you look at the Support Vector Regression file that includes some additional exploratory analysis, as well as SVR models for a continuous and dichotomous outcome. This can be found in "XB_MLsection.Rmd"
 
-Finally, we recommend you look at the Random Forest analysis that explores similar models as the SVR using a different Machine Learning method. This can be found in "Yu Fu Random Forest.Rmd"
+Finally, we recommend you look at the Random Forest analysis that explores similar models as the SVR using a different Machine Learning method. Since this method yieled the most success in predicting the outcome, we used it to compare the pre-vaccine introduction datat to the full data set. This can be found in "Yu Fu Random Forest.Rmd"
 
 
 ### TL/DR
