@@ -15,9 +15,9 @@ The following students contributed to this project:
 Predict COVID-19 Mortality Risk using Environmental, Behavioral, and Socioeconomic Factors among the U.S. Population
 
 ### Study Objectives
-1. To investigate the effect of long-term exposure to air pollution on COVID-19 outcomes
+1. To investigate the effect of long-term exposure to air pollution on COVID-19 mortality through multiple waves of the pandemic
 2. To use machine learning to predict the number of deaths COVID-19 deaths from 03/22/20 to 10/31/21
-3. To understand if the trend in county-level COVID-19 deaths associated with long-term exposure to air pollution are the same before the introduction of vaccines as they are for the full period. 
+3. To understand if the trend in county-level COVID-19 deaths associated with long-term exposure to air pollution are the same before the introduction of vaccines as they are for the full period.
 
 ## How to Navigate
 Welcome to our final project repository! For the ease of examining all of the work that went into our project, we recommend you open and knit the files in the order best allows for you to follow the projects creation. That is, we recommend that you start by opening our data acquisition and cleaning file to get a better sense of the raw data and the various sources they stem from. This is "WebScraping_1211.Rmd". 
