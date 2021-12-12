@@ -16,7 +16,7 @@ Predict COVID-19 Mortality Risk using Environmental, Behavioral, and Socioeconom
 
 ### Study Objectives
 1. To investigate the effect of long-term exposure to air pollution on COVID-19 mortality through multiple waves of the pandemic
-2. To use machine learning to predict the number of deaths COVID-19 deaths from 03/22/20 to 10/31/21 and whether or not a county with be above the median morality rate for all US counties
+2. To use machine learning to predict the number of deaths COVID-19 deaths from 03/22/20 to 10/31/21 and whether or not a county will be above the median morality rate for all US counties
 3. To understand if the trend in county-level COVID-19 deaths associated with long-term exposure to air pollution are the same before the introduction of vaccines as they are for the full period.
 
 ## How to Navigate
