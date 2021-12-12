@@ -368,6 +368,7 @@ date_of_study &lt;- &quot;10-31-2021&quot;
 #date_of_study &lt;- &quot;04-15-2021&quot;</code></pre>
 <div id="import-and-prepare-datasets" class="section level2">
 <h2>Import and Prepare Datasets</h2>
+<p>We obtained COVID-19 death counts for each county in the United States from Johns Hopkins University, Center for Systems Science and Engineering Coronavirus Resource Center. We collected county-level COVID-19 data reported by the CDC and state health departments, including the number of new and cumulative deaths and confirmed cases reported in each county across the United States, updated daily.</p>
 <pre class="r"><code># Historical data
 covid_historical &lt;- read.csv(text = getURL(&quot;https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports/03-30-2020.csv&quot;))
 covid_us_historical &lt;- subset(covid_historical, Country_Region == &quot;US&quot; &amp; is.na(FIPS) == F)</code></pre>
@@ -380,12 +381,14 @@ covid$FIPS &lt;- str_pad(covid$FIPS, 5, pad = &quot;0&quot;)
 # Import Long-term Exposure PM2.5 data
 county_pm &lt;- read.csv(text = getURL(&quot;https://raw.githubusercontent.com/wxwx1993/PM_COVID/updated_data/Data/county_pm25.csv&quot;))
 county_temp &lt;- read.csv(text = getURL(&quot;https://raw.githubusercontent.com/wxwx1993/PM_COVID/updated_data/Data/temp_seasonal_county.csv&quot;))</code></pre>
+<p><strong>Import confounding bias for adjusted analysis</strong> Multiple socioeconomic and demographic variables were collected from the 2000 and 2010 Census, the 2005–2016 American Community Surveys and the 2009–2016 CDC Compressed Mortality File.</p>
+<p>The American Community Survey data were extracted for each zip code and then averaging across zip codes within a county. We also collect two county-level health risk factors: proportion of residents with obesity and proportion of residents that are current smokers from the Robert Wood Johnson Foundation’s 2020 County Health Rankings.</p>
 <pre class="r"><code># Import census, brfss data as potential confounders
 county_census &lt;- read.csv(text = getURL(&quot;https://raw.githubusercontent.com/wxwx1993/PM_COVID/updated_data/Data/census_county_interpolated.csv&quot;))
 
 GET(&quot;https://www.countyhealthrankings.org/sites/default/files/media/document/analytic_data2020.csv&quot;, write_disk(&quot;county_brfss.csv&quot;, overwrite = TRUE))</code></pre>
 <pre><code>## Response [https://www.countyhealthrankings.org/sites/default/files/media/document/analytic_data2020.csv]
-##   Date: 2021-12-06 03:00
+##   Date: 2021-12-12 04:18
 ##   Status: 200
 ##   Content-Type: application/octet-stream
 ##   Size: 12.2 MB
@@ -431,8 +434,8 @@ county_base_mortality$&quot;young_pecent&quot;[is.na(county_base_mortality$&quot
 NCHSURCodes2013 &lt;- read.csv(&quot;https://raw.githubusercontent.com/wxwx1993/PM_COVID/updated_data/Data/NCHSURCodes2013.csv&quot;)
 NCHSURCodes2013$FIPS &lt;- str_pad(NCHSURCodes2013$FIPS, 5, pad = &quot;0&quot;)</code></pre>
 </div>
-<div id="variable-construction-and-dataset-merge-join" class="section level2">
-<h2>Variable Construction and Dataset Merge &amp; Join</h2>
+<div id="key-variable-aggregations-dataset-merge-join" class="section level2">
+<h2>Key Variable Aggregations, Dataset Merge &amp; Join</h2>
 <pre class="r"><code># pm2.5 average over 17 years
 county_pm_aggregated &lt;- county_pm %&gt;% 
     group_by(fips) %&gt;% 
@@ -487,7 +490,7 @@ aggregate_pm_census_cdc &lt;- merge(aggregate_pm_census,
 aggregate_pm_census_cdc &lt;- aggregate_pm_census_cdc[is.na(aggregate_pm_census_cdc$fips) == F, ]
 
 #Export Data
-#write.csv(aggregate_pm_census_cdc,&quot;aggregate_pm_census_cdc_211031.csv&quot;, row.names = FALSE)
+write.csv(aggregate_pm_census_cdc,&quot;aggregate_pm_census_cdc_211031.csv&quot;, row.names = FALSE)
 #write.csv(aggregate_pm_census_cdc,&quot;aggregate_pm_census_cdc_210415.csv&quot;, row.names = FALSE)</code></pre>
 </div>
 
