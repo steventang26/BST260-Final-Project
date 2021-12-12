@@ -5,6 +5,7 @@ output: html_document
 # Data Wrangling and Web Scraping Code for BST260 Final Project
 # Code was modified based on open source provided by: https://github.com/wxwx1993/PM_COVID
 # Previous study have been published as "Wu, X., Nethery, R.C., Sabath, M.B., Braun, D. and Dominici, F., 2020. Air pollution and COVID-19 mortality in the United States: strengths and limitations of an ecological regression analysis. Science advances, 6(45), p.eabd4049"
+# We have contacted the authors and got permission to use their datasets.
 # We thank all of the authors for making their data public and for enabling our project to be possible.
 ---
 
@@ -22,6 +23,8 @@ date_of_study <- "10-31-2021"
 ```
 
 ## Import and Prepare Datasets
+
+We obtained COVID-19 death counts for each county in the United States from Johns Hopkins University, Center for Systems Science and Engineering Coronavirus Resource Center. We collected county-level COVID-19 data reported by the CDC and state health departments, including the number of new and cumulative deaths and confirmed cases reported in each county across the United States, updated daily.
 
 ```{r}
 # Historical data
@@ -42,6 +45,10 @@ county_pm <- read.csv(text = getURL("https://raw.githubusercontent.com/wxwx1993/
 county_temp <- read.csv(text = getURL("https://raw.githubusercontent.com/wxwx1993/PM_COVID/updated_data/Data/temp_seasonal_county.csv"))
 
 ```
+
+**Import confounding bias for adjusted analysis:** We collected various socioeconomic and demographic variables from the 2000 and 2010 Census, the 2005–2016 American Community Surveys and the 2009–2016 CDC Compressed Mortality File.
+
+The American Community Survey data were extracted for each zip code and then averaging across zip codes within a county. We also collect two county-level health risk factors: proportion of residents with obesity and proportion of residents that are current smokers from the Robert Wood Johnson Foundation’s 2020 County Health Rankings.
 
 ```{r}
 # Import census, brfss data as potential confounders
@@ -91,7 +98,7 @@ NCHSURCodes2013$FIPS <- str_pad(NCHSURCodes2013$FIPS, 5, pad = "0")
 
 ```
 
-## Variable Construction and Dataset Merge & Join
+## Key Variable Aggregations, Dataset Merge & Join
 
 ```{r}
 # pm2.5 average over 17 years
@@ -148,7 +155,7 @@ aggregate_pm_census_cdc <- merge(aggregate_pm_census,
 aggregate_pm_census_cdc <- aggregate_pm_census_cdc[is.na(aggregate_pm_census_cdc$fips) == F, ]
 
 #Export Data
-#write.csv(aggregate_pm_census_cdc,"aggregate_pm_census_cdc_211031.csv", row.names = FALSE)
+write.csv(aggregate_pm_census_cdc,"aggregate_pm_census_cdc_211031.csv", row.names = FALSE)
 #write.csv(aggregate_pm_census_cdc,"aggregate_pm_census_cdc_210415.csv", row.names = FALSE)
 
 ```
