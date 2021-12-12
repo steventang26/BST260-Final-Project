@@ -10,7 +10,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ## Overview and Motivation: 
-This project examines the relationship between longterm exposure to air pollution and the risk of mortality from COVID-19. To do so on the relatively quick timescale of this course, we will use data on the county-level from a well-documented and publicly available dataset created by researchers at HSPH. We were motivated to do this project as COVID-19 continues to devastate much of the world and the patternings of deaths are unequitable. Within the US, these disparities exist across racial and socioeconomic lines and vary considerably across different geographic locations. Researchers and local policymakers are still facing urgent public health questions to mitigate the disease’s burden on the population level, particularly as new variants that threaten to weaken the effecacy of vaccines arise. We feel that it is important to take into consideration how the environmental and socioecomonic circumstances of different areas may predict the severity (measured in deaths from COIVD-19) of an outbreak in a given community. 
+This project examines the relationship between longterm exposure to air pollution and the risk of mortality from COVID-19. To do so on the relatively quick timescale of this course, we will use data on the county-level from a well-documented and publicly available dataset created by researchers at HSPH. We were motivated to do this project as COVID-19 continues to devastate much of the world and the patterning of deaths are inequitable. Within the US, these disparities exist across racial and socioeconomic lines and vary considerably across different geographic locations. Researchers and local policymakers are still facing urgent public health questions to mitigate the disease’s burden on the population level, particularly as new variants that threaten to weaken the efficacy of vaccines arise. We feel that it is important to take into consideration how the environmental and socioeconomic circumstances of different areas may predict the severity (measured in deaths from COIVD-19) of an outbreak in a given community. 
+
 
 ## Related Work: 
 According to data from Johns Hopkins University, more than 353,000 coronavirus deaths have been reported this year. Many of the pre-existing conditions that increase the risk of COVID-19 mortality are the same diseases that are affected by long-term exposure to air pollution. Long-term exposure to PM2.5 has been connected to a number of comorbidities, including cardiovascular and lung disease, that have been linked to poor prognosis and death in COVID-19 patients. However, the majority of the studies focused on the association between PM2.5 and COVID-19 cases rather than COVID-19 mortality. One project that explored the relationship between PM2.5 and COVID-19 deaths was done by Wu et al. As mentioned above, this work directly inspired our project and a link to it can be found here https://github.com/wxwx1993/PM_COVID. In short, that study indicates that higher historical PM2.5 exposures are positively associated with higher county-level COVID-19 mortality rates after accounting for many area-level confounders. However, it only examined data up to mid-June 2020, which could be biased and of lower generalizability since it only reflects those who died in the first wave pf COVID-19 cases in the US. 
@@ -30,5 +31,14 @@ We first created visualizations depicting maps of the US shaded by various facto
 What did you learn about the data? How did you answer the questions? How can you justify your answers? Note that 1 type of analysis per team member is required. A Shiny app counts as a type of analysis.
 
 
-## Webscraping, Data Wrangling, and Merging 
+## Results
+
+### Webscraping, Data Wrangling, and Merging 
+
+### Shiny App 
+
+### Regression Models 
+
+### Machine Learning 
+
 

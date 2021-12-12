@@ -1,0 +1,13 @@
+name: County-Level
+title: County-Level
+username:
+account: jfarmer13
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 5308124
+bundleId: 5357863
+url: https://jfarmer13.shinyapps.io/County-Level/
+when: 1639184453.9322
+lastSyncTime: 1639184453.93222
+asMultiple: FALSE
+asStatic: FALSE
