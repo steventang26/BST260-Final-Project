@@ -12,7 +12,7 @@ The following students contributed to this project:
 5. Steven Tang 
 
 ## Project Title
-Predict COVID-19 Mortality Risk using Environmental, Behavioral, and Socioeconomic Factors among the U.S. Population
+Predicting COVID-19 Mortality Risk using Environmental, Behavioral, and Socioeconomic Factors among the U.S. Population
 
 ### Study Objectives
 1. To investigate the effect of long-term exposure to air pollution on COVID-19 mortality through multiple waves of the pandemic
