@@ -14,7 +14,7 @@ This project examines the relationship between long-term exposure to air polluti
 
 ### Objectives
 1. To investigate the effect of long-term exposure to PM2.5 on COVID-19 outcomes.
-2. To use machine learning to predict whether or not a county will have above average  COVID-19 deaths from 03/22/20 to 10/31/21. 
+2. To use machine learning to predict whether or not a county will have above median COVID-19 deaths for all US counties from 03/22/20 to 10/31/21. 
 3. To understand if the trend in county-level COVID-19 deaths associated with long-term exposure to air pollution are the same before the introduction of vaccines as they are for the full period. 
 
 ## Related Work: 
@@ -52,6 +52,15 @@ Since Random Forests can calculate feature importance and outperform linear mode
 
 
 ### Conclusions: 
+
+Long-term exposure to PM2.5 is significantly associated with the number of deaths in a county; however it does not significantly associated with whether or not a county will be above or below the median mortality rate of all counties in the US. Both of these remain the same after adjustment for several socioeconomic and other environmental factors. 
+
+Prediction models for continuous outcome of COVID mortality did not achieve very good MSE
+
+Random Forest Models better predicted whether a county would have above or below the median mortality for all US counties compared to Support Vector Regression 
+
+It is possible that vaccination has somewhat mitigated the negative effects of the long-term PM2.5 exposure on COVID-19 mortality.
+
 
 
 
